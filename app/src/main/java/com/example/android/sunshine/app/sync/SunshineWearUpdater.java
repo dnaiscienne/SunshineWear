@@ -10,13 +10,13 @@ import com.example.android.sunshine.app.Utility;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.PendingResult;
+import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.wearable.Asset;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataMap;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
-import com.google.android.gms.common.api.ResultCallback;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -50,17 +50,20 @@ public class SunshineWearUpdater implements GoogleApiClient.ConnectionCallbacks,
     public void updateWatchWeather(double high, double low, int weatherId){
         PutDataMapRequest putDataMapRequest = PutDataMapRequest.create(FORECAST_PATH);
         DataMap dataMap = putDataMapRequest.getDataMap();
-        dataMap.putDouble(MAX_KEY, high);
-        dataMap.putDouble(MIN_KEY, low);
+
+        dataMap.putString(MAX_KEY, Utility.formatTemperature(mContext, high));
+        dataMap.putString(MIN_KEY, Utility.formatTemperature(mContext, low));
         int artId = Utility.getArtResourceForWeatherCondition(weatherId);
         Asset weatherIcon = createAsset(artId);
         dataMap.putAsset(ICON_KEY, weatherIcon);
+        dataMap.putLong("time", System.currentTimeMillis());
         PutDataRequest request = putDataMapRequest.asPutDataRequest();
-
+        request.setUrgent();
         PendingResult pendingResult = Wearable.DataApi.putDataItem(mGoogleApiClient, request);
         pendingResult.setResultCallback(new ResultCallback<DataApi.DataItemResult>() {
             @Override
             public void onResult(final DataApi.DataItemResult result) {
+                Log.v(LOG_TAG, "onResult");
                 if (result.getStatus().isSuccess()) {
                     Log.d(LOG_TAG, "Data item set: " + result.getDataItem().getUri());
                 }
@@ -71,11 +74,13 @@ public class SunshineWearUpdater implements GoogleApiClient.ConnectionCallbacks,
 
     public void disconnectGoogleApiClient(){
         if (mGoogleApiClient != null && mGoogleApiClient.isConnected()) {
+            Log.v(LOG_TAG, "disconnecting GoogleApiClient");
             mGoogleApiClient.disconnect();
             }
     }
     public void  connectGoogleApiClient(){
         if(!mResolvingError){
+            Log.v(LOG_TAG, "connecting GoogleApiClient");
             mGoogleApiClient.connect();
         }
     }
